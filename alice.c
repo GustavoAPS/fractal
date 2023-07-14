@@ -6,11 +6,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <openssl/des.h>
 
 #define PORT 8080
 #define MAX_BUFFER_SIZE 1024
+#define KEY_SIZE 8
 
-void sendFile(const char* filename, const char* ip, int port) {
+void sendFile(const char* filename, const char* ip, int port, const unsigned char* key) {
     int sockfd;
     struct sockaddr_in server_addr;
 
@@ -32,6 +34,12 @@ void sendFile(const char* filename, const char* ip, int port) {
         exit(1);
     }
 
+    // Envio da chave DES
+    if (send(sockfd, key, KEY_SIZE, 0) < 0) {
+        perror("Erro ao enviar a chave DES");
+        exit(1);
+    }
+
     // Abertura do arquivo para leitura
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
@@ -40,7 +48,7 @@ void sendFile(const char* filename, const char* ip, int port) {
     }
 
     // Envio do arquivo para o servidor
-    char buffer[MAX_BUFFER_SIZE];
+    unsigned char buffer[MAX_BUFFER_SIZE];
     size_t bytesRead;
     while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
         if (send(sockfd, buffer, bytesRead, 0) < 0) {
@@ -55,11 +63,12 @@ void sendFile(const char* filename, const char* ip, int port) {
 }
 
 int main() {
-    const char* filename = "snail.bmp";
+    const char* filename = "fractaljulia.bmp";
     const char* ip = "127.0.0.1";
     int port = 8080;
+    unsigned char desKey[KEY_SIZE] = {'k', 'e', 'y', '1', '2', '3', '4', '5'};
 
-    sendFile(filename, ip, port);
+    sendFile(filename, ip, port, desKey);
 
     return 0;
 }
