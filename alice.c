@@ -8,8 +8,9 @@
 #include <arpa/inet.h>
 
 #define PORT 8080
+#define MAX_BUFFER_SIZE 1024
 
-int main() {
+void sendFile(const char* filename, const char* ip, int port) {
     int sockfd;
     struct sockaddr_in server_addr;
 
@@ -22,8 +23,8 @@ int main() {
 
     // Configuração do endereço do servidor
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(PORT);
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_port = htons(port);
+    server_addr.sin_addr.s_addr = inet_addr(ip);
 
     // Conexão com o servidor
     if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -31,20 +32,34 @@ int main() {
         exit(1);
     }
 
-    char message[1024];
+    // Abertura do arquivo para leitura
+    FILE* file = fopen(filename, "rb");
+    if (file == NULL) {
+        perror("Erro ao abrir o arquivo para leitura");
+        exit(1);
+    }
 
-    // Envio de mensagem para o servidor
-    strcpy(message, "Olá, Bob!");
-    send(sockfd, message, strlen(message), 0);
-    printf("Mensagem enviada para Bob: %s\n", message);
+    // Envio do arquivo para o servidor
+    char buffer[MAX_BUFFER_SIZE];
+    size_t bytesRead;
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+        if (send(sockfd, buffer, bytesRead, 0) < 0) {
+            perror("Erro ao enviar o arquivo");
+            exit(1);
+        }
+    }
 
-    // Recebimento de resposta do servidor
-    memset(message, 0, sizeof(message));
-    recv(sockfd, message, sizeof(message), 0);
-    printf("Resposta de Bob: %s\n", message);
-
-    // Fechamento do socket
+    fclose(file);
     close(sockfd);
+    printf("Arquivo enviado com sucesso!\n");
+}
+
+int main() {
+    const char* filename = "snail.bmp";
+    const char* ip = "127.0.0.1";
+    int port = 8080;
+
+    sendFile(filename, ip, port);
 
     return 0;
 }

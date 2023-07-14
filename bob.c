@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
 #define PORT 8080
+#define MAX_BUFFER_SIZE 1024
 
 int main() {
     int sockfd, newsockfd;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len;
-    char message[1024];
+    char buffer[MAX_BUFFER_SIZE];
 
     // Criação do socket TCP
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -45,19 +45,23 @@ int main() {
     }
     printf("Conexão estabelecida com Alice.\n");
 
-    // Recebimento de mensagem do cliente
-    memset(message, 0, sizeof(message));
-    recv(newsockfd, message, sizeof(message), 0);
-    printf("Mensagem recebida de Alice: %s\n", message);
+    // Recebimento do arquivo
+    FILE* file = fopen("received.bmp", "wb");
+    if (file == NULL) {
+        perror("Erro ao abrir o arquivo para escrita");
+        exit(1);
+    }
 
-    // Resposta ao cliente
-    strcpy(message, "Olá, Alice!");
-    send(newsockfd, message, strlen(message), 0);
-    printf("Resposta enviada para Alice: %s\n", message);
+    int bytesRead;
+    while ((bytesRead = read(newsockfd, buffer, sizeof(buffer))) > 0) {
+        fwrite(buffer, 1, bytesRead, file);
+    }
 
-    // Fechamento dos sockets
+    fclose(file);
     close(newsockfd);
     close(sockfd);
+
+    printf("Arquivo recebido com sucesso!\n");
 
     return 0;
 }
